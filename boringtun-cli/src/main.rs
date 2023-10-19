@@ -120,7 +120,7 @@ fn main() {
 
         let daemonize = Daemonize::new()
             .working_directory("/tmp")
-            .exit_action(move || {
+            .privileged_action(move || {
                 let mut b = [0u8; 1];
                 if sock2.recv(&mut b).is_ok() && b[0] == 1 {
                     println!("BoringTun started successfully");

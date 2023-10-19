@@ -12,8 +12,8 @@ use blake2::digest::{FixedOutput, KeyInit};
 use blake2::{Blake2s256, Blake2sMac, Digest};
 use chacha20poly1305::XChaCha20Poly1305;
 use rand_core::OsRng;
-use ring::aead::{Aad, LessSafeKey, Nonce, UnboundKey, CHACHA20_POLY1305};
-use std::convert::TryInto;
+use ring::aead::{Aad, LessSafeKey, Nonce, Tag, UnboundKey, CHACHA20_POLY1305};
+use std::convert::{TryFrom, TryInto};
 use std::time::{Duration, SystemTime};
 
 #[cfg(feature = "mock-instant")]
@@ -38,7 +38,7 @@ const INITIAL_CHAIN_HASH: [u8; KEY_LEN] = [
 
 #[inline]
 pub(crate) fn b2s_hash(data1: &[u8], data2: &[u8]) -> [u8; 32] {
-    let mut hash = Blake2s256::new();
+    let mut hash = <Blake2s256 as Digest>::new();
     hash.update(data1);
     hash.update(data2);
     hash.finalize().into()
@@ -143,17 +143,19 @@ fn aead_chacha20_open_inner(
     data: &[u8],
     aad: &[u8],
 ) -> Result<(), ring::error::Unspecified> {
+    let ciphertext_len = data.len().checked_sub(16).ok_or(ring::error::Unspecified)?;
+    let (data, tag) = data.split_at(ciphertext_len);
+    buffer.copy_from_slice(data);
+
     let key = LessSafeKey::new(UnboundKey::new(&CHACHA20_POLY1305, key).unwrap());
 
-    let mut inner_buffer = data.to_owned();
-
-    let plaintext = key.open_in_place(
+    key.open_in_place_separate_tag(
         Nonce::assume_unique_for_key(nonce),
         Aad::from(aad),
-        &mut inner_buffer,
+        Tag::from(<[u8; 16]>::try_from(tag).unwrap()),
+        buffer,
+        0..,
     )?;
-
-    buffer.copy_from_slice(plaintext);
 
     Ok(())
 }

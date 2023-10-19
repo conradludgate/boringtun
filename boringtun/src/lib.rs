@@ -8,10 +8,6 @@
 #[cfg(feature = "device")]
 pub mod device;
 
-#[cfg(feature = "ffi-bindings")]
-pub mod ffi;
-#[cfg(feature = "jni-bindings")]
-pub mod jni;
 pub mod noise;
 
 #[cfg(not(feature = "mock-instant"))]

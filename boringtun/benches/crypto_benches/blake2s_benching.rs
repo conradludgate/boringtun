@@ -15,7 +15,7 @@ pub fn bench_blake2s_hash(c: &mut Criterion) {
             let buf_in = vec![0u8; size];
 
             b.iter(|| {
-                let mut hasher = Blake2s256::new();
+                let mut hasher = <Blake2s256 as Digest>::new();
                 hasher.update(&buf_in);
                 hasher.finalize();
             });
